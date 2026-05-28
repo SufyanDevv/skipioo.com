@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Skipioo — Ad-Free YouTube Player</title>
+  <meta name="description" content="Watch YouTube without ads, no extensions, no accounts. Paste a link. Hit play. Done."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --red: #ff2d2d;
+      --red-glow: rgba(255,45,45,0.18);
+      --white: #f0f0f5;
+      --muted: #6b6b80;
+      --green: #00e676;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+    }
+
+    /* NOISE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.4;
+    }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.5rem 2.5rem;
+      position: sticky; top: 0;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    .logo { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+    .logo span { color: var(--red); }
+    .nav-cta {
+      background: var(--red); color: #fff;
+      padding: 0.55rem 1.4rem; border-radius: 100px;
+      text-decoration: none; font-weight: 500; font-size: 0.9rem;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      min-height: 92vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 5rem 1.5rem 4rem;
+      overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute; top: -10%; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 500px;
+      background: radial-gradient(ellipse at center, rgba(255,45,45,0.14) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(255,45,45,0.1); border: 1px solid rgba(255,45,45,0.3);
+      border-radius: 100px; padding: 0.4rem 1rem;
+      font-size: 0.78rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--red); margin-bottom: 2rem;
+      animation: fadeUp 0.6s ease both;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity: 0.3; } }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.8rem, 7vw, 6rem);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.04em;
+      max-width: 800px;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+    h1 .accent { color: var(--red); }
+
+    .hero-sub {
+      margin-top: 1.5rem;
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: var(--muted);
+      max-width: 500px;
+      line-height: 1.6;
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    .hero-cta {
+      margin-top: 2.5rem;
+      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+    .btn-primary {
+      background: var(--red); color: #fff;
+      padding: 0.9rem 2.2rem; border-radius: 100px;
+      text-decoration: none; font-weight: 500; font-size: 1rem;
+      box-shadow: 0 0 30px var(--red-glow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(255,45,45,0.35); }
+    .btn-secondary {
+      background: transparent; color: var(--white);
+      padding: 0.9rem 2.2rem; border-radius: 100px;
+      border: 1px solid var(--border);
+      text-decoration: none; font-weight: 400; font-size: 1rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--muted); transform: translateY(-2px); }
+
+    /* URL DEMO */
+    .url-demo {
+      margin-top: 3.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      max-width: 580px; width: 100%;
+      text-align: left;
+      animation: fadeUp 0.6s 0.4s ease both;
+    }
+    .url-demo-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 1rem; }
+    .url-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; font-family: monospace; font-size: 0.85rem; }
+    .url-row:last-child { margin-bottom: 0; }
+    .url-tag { font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-family: 'DM Sans', sans-serif; letter-spacing: 0.04em; text-transform: uppercase; }
+    .url-tag.from { background: rgba(255,45,45,0.12); color: #ff6b6b; }
+    .url-tag.to { background: rgba(0,230,118,0.12); color: var(--green); }
+    .url-text.muted-url { color: var(--muted); }
+    .url-text.bright-url { color: var(--white); }
+    .url-text .highlight { color: var(--red); font-weight: bold; }
+    .url-text .highlight-green { color: var(--green); font-weight: bold; }
+    .arrow { color: var(--muted); font-size: 0.8rem; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* STATS STRIP */
+    .stats {
+      display: flex; justify-content: center; flex-wrap: wrap; gap: 0;
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .stat {
+      flex: 1; min-width: 160px;
+      padding: 2rem 1.5rem; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-num { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; color: var(--white); }
+    .stat-num .red { color: var(--red); }
+    .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* FEATURES */
+    section { padding: 6rem 1.5rem; max-width: 1080px; margin: 0 auto; }
+    .section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--red); margin-bottom: 1rem; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 3.5rem; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5px; background: var(--border); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+    .feature-card { background: var(--surface); padding: 2rem; transition: background 0.2s; }
+    .feature-card:hover { background: #16161f; }
+    .feature-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+    .feature-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+    /* COMPARISON */
+    .compare-table { width: 100%; border-collapse: collapse; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+    .compare-table th { background: var(--surface); padding: 1.2rem 1.5rem; text-align: center; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; border-bottom: 1px solid var(--border); }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table th.highlight-col { color: var(--red); }
+    .compare-table td { padding: 1rem 1.5rem; text-align: center; font-size: 0.88rem; border-bottom: 1px solid var(--border); }
+    .compare-table td:first-child { text-align: left; color: var(--muted); }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .check { color: var(--green); font-size: 1.1rem; }
+    .cross { color: #444; font-size: 1.1rem; }
+    .price-free { color: var(--green); font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; }
+    .price-paid { color: var(--muted); }
+
+    /* CTA FOOTER */
+    .cta-footer {
+      text-align: center; padding: 6rem 1.5rem;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      position: relative; overflow: hidden;
+    }
+    .cta-footer::before {
+      content: '';
+      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 300px;
+      background: radial-gradient(ellipse at bottom, rgba(255,45,45,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-footer h2 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 1.2rem; }
+    .cta-footer p { color: var(--muted); max-width: 420px; margin: 0 auto 2.5rem; line-height: 1.6; }
+    .footer-note { margin-top: 4rem; color: var(--muted); font-size: 0.75rem; }
+
+    @media (max-width: 600px) {
+      nav { padding: 1rem 1.2rem; }
+      .stat { min-width: 130px; padding: 1.5rem 1rem; }
+      .stat-num { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="logo">Skip<span>i</span>oo</div>
+    <a href="https://skipioo.com" class="nav-cta" target="_blank">Watch Now →</a>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-glow"></div>
+    <div class="badge"><span class="badge-dot"></span>Free &amp; Open — No Ads, Ever</div>
+    <h1>YouTube.<br>Without the <span class="accent">ads.</span></h1>
+    <p class="hero-sub">Paste any YouTube link and watch instantly — no extensions, no account, no subscription. Just clean, fast video.</p>
+    <div class="hero-cta">
+      <a href="https://skipioo.com" class="btn-primary" target="_blank">Open Skipioo</a>
+      <a href="#how" class="btn-secondary">How it works ↓</a>
+    </div>
+
+    <div class="url-demo">
+      <div class="url-demo-label">Pro tip — just replace the URL</div>
+      <div class="url-row">
+        <span class="url-tag from">From</span>
+        <span class="url-text muted-url"><span class="highlight">youtube</span>.com/watch?v=dQw4w9WgXcQ</span>
+      </div>
+      <div class="url-row">
+        <span class="url-tag to">To</span>
+        <span class="url-text bright-url"><span class="highlight-green">skipioo</span>.com/watch?v=dQw4w9WgXcQ</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><div class="stat-num"><span class="red">$0</span></div><div class="stat-label">Forever free</div></div>
+    <div class="stat"><div class="stat-num">0</div><div class="stat-label">Ads shown</div></div>
+    <div class="stat"><div class="stat-num"><span class="red">$168</span></div><div class="stat-label">Saved vs Premium/yr</div></div>
+    <div class="stat"><div class="stat-num">0</div><div class="stat-label">Extensions needed</div></div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <div class="section-label">Simple as it gets</div>
+    <div class="section-title">Three steps to<br>ad-free YouTube</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <div class="feature-title">1. Copy a YouTube URL</div>
+        <div class="feature-desc">Grab any YouTube video, playlist, or live stream link from your browser or app.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <div class="feature-title">2. Paste into Skipioo</div>
+        <div class="feature-desc">Go to skipioo.com, paste the link, and it loads instantly. Or just swap "youtube" for "skipioo" in the URL.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">▶️</div>
+        <div class="feature-title">3. Watch ad-free</div>
+        <div class="feature-desc">No pre-rolls. No mid-rolls. No overlays. Just the video you came for.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section>
+    <div class="section-label">Everything you need</div>
+    <div class="section-title">All the features.<br>None of the cost.</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🚫</div>
+        <div class="feature-title">Instant Ad Blocking</div>
+        <div class="feature-desc">Eliminates pre-roll, mid-roll, and overlay ads immediately. No waiting, no interruptions.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Privacy First</div>
+        <div class="feature-desc">No tracking, no data collection, no cookies. Your viewing habits stay yours alone.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎵</div>
+        <div class="feature-title">Background Playback</div>
+        <div class="feature-desc">Keep audio playing while using other apps. Better than YouTube Premium, for free.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📂</div>
+        <div class="feature-title">Playlist Support</div>
+        <div class="feature-desc">Queue up hours of music, lectures, or videos and never hear a single ad break.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📥</div>
+        <div class="feature-title">Video Downloads</div>
+        <div class="feature-desc">Download any YouTube video in high quality — no ads, no hassle.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📡</div>
+        <div class="feature-title">Live Streaming</div>
+        <div class="feature-desc">Watch sports, news, and live events without constant ad interruptions.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <div class="feature-title">Works Everywhere</div>
+        <div class="feature-desc">iPhone, Android, Chrome, Safari, Firefox, Smart TV — any browser, any device.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">No Install Required</div>
+        <div class="feature-desc">Works directly in your browser. No extension permissions, no software, no account.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section>
+    <div class="section-label">The honest comparison</div>
+    <div class="section-title">Skipioo vs. the rest</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th class="highlight-col">Skipioo</th>
+          <th>YouTube</th>
+          <th>YouTube Premium</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Ad-free watching</td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="check">✓</span></td></tr>
+        <tr><td>Background playback</td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="check">✓</span></td></tr>
+        <tr><td>Video downloads</td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="check">✓</span></td></tr>
+        <tr><td>No account needed</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td></tr>
+        <tr><td>No tracking</td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+        <tr><td>No install needed</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="check">✓</span></td></tr>
+        <tr><td>Monthly cost</td><td><span class="price-free">$0</span></td><td><span class="price-paid">$0 (with ads)</span></td><td><span class="price-paid">$13.99/mo</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- CTA FOOTER -->
+  <div class="cta-footer">
+    <h2>Ready to skip the ads?</h2>
+    <p>Join thousands of users who've reclaimed their YouTube experience — for free.</p>
+    <a href="https://skipioo.com" class="btn-primary" target="_blank" style="font-size:1.1rem; padding: 1rem 2.8rem;">Open Skipioo →</a>
+    <div class="footer-note">
+      © 2026 Skipioo · Non-commercial, personal use · Not affiliated with YouTube or Google LLC<br>
+      Uses the official YouTube embed player in compliance with YouTube's embed guidelines.
+    </div>
+  </div>
+
+</body>
+</html>
